@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Phonex keeps the CPU on while it sets up Linux or Codex works (studio/Studio.kt). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Asks to be left out of battery optimization: otherwise Android, and ColorOS more so, cut a background
+         app's connections, and Codex's reply stream with them (studio/Background.kt). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Speech input for the agent prompt bar; only recognized text reaches Linux. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 

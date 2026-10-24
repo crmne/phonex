@@ -32,6 +32,11 @@ class StudioActivity : ComponentActivity() {
         if (application is App) app.runtime.screenStarted()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (application is App) app.studio.backgroundAllowed = Background.allowed(this)
+    }
+
     override fun onStop() {
         if (application is App) app.runtime.screenStopped()
         super.onStop()
@@ -46,5 +51,7 @@ class StudioActivity : ComponentActivity() {
         }
         app.runtime.finishWelcome()
         app.runtime.installLinux(listOf(Studio.CODEX))
+        // Setup itself runs for many minutes in the background.
+        Background.request(this)
     }
 }

@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.omalauncher.Runtime
 import dev.omalauncher.linux.LinuxState
+import dev.omalauncher.studio.Background
 import dev.omalauncher.studio.CodexState
 import dev.omalauncher.studio.Project
 import dev.omalauncher.studio.Studio
@@ -106,6 +107,24 @@ private fun ProjectList(
                 Spacer(Modifier.height(4.dp))
                 Label("Describe a web app. Codex builds it on this phone, and you watch it run.", style = Type.small, color = c.secondary)
                 Spacer(Modifier.height(24.dp))
+            }
+            if (!studio.backgroundAllowed) {
+                item {
+                    val context = LocalContext.current
+                    Column(
+                        Modifier.fillMaxWidth().clip(CardShape).background(c.surface).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Label("Let Phonex work in the background", style = Type.small.copy(fontWeight = FontWeight.Medium))
+                        Label(
+                            "Otherwise the phone cuts Codex off when you switch apps or lock the screen, and it loses its work.",
+                            style = Type.small,
+                            color = c.secondary,
+                        )
+                        PillButton("Allow", { Background.request(context) })
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
             }
             if (studio.projects.projects.isNotEmpty()) {
                 item {

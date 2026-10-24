@@ -71,6 +71,9 @@ class Studio(
     var state by mutableStateOf<CodexState>(CodexState.Off)
         private set
 
+    /** Phonex is exempt from battery optimization (see [Background]); re-read whenever its screen resumes. */
+    var backgroundAllowed by mutableStateOf(true)
+
     private var client: CodexClient? = null
     private var process: Process? = null
     private var connecting: Job? = null
