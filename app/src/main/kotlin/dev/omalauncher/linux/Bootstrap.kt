@@ -70,6 +70,9 @@ private val PACKAGES =
         "man-db", "less", "dua-cli", "inxi", "whois", "git", "bash-completion", "pulseaudio", "pulseaudio-alsa", "micro",
     )
 
+/** Dev servers for Phonex's projects: most web stacks need node, and python serves a static page. */
+private val WEB_RUNTIME = listOf("nodejs", "npm", "python")
+
 /** Omarchy's Winamp-style player; not in Arch's ARM repos, but upstream ships an arm64 build. */
 private const val CLIAMP_VERSION = "v2.3.0"
 private const val CLIAMP_URL = "https://github.com/bjarneo/cliamp/releases/download/$CLIAMP_VERSION/cliamp-linux-arm64"
@@ -204,6 +207,8 @@ class Bootstrap(
                 guest("pacman -Rdd --noconfirm linux-aarch64 \$(pacman -Qq | grep ^linux-firmware); true")
             },
             Step("packages-1", Stage.Packages, "Installing packages", network = true) { guest(pacmanInstall(PACKAGES, refresh = true)) },
+            // What Phonex's web apps run on; Codex adds the rest of a project's tools itself.
+            Step("web-runtime-1", Stage.Packages, "Installing Node.js and Python", network = true) { guest(pacmanInstall(WEB_RUNTIME)) },
             Step("keymap-1", Stage.Packages, "Compiling keymap", network = false, isDone = { proot.keymap.exists() }) { compileKeymap() },
             Step("cliamp-$CLIAMP_VERSION", Stage.Packages, "Installing cliamp", network = true) { installCliamp() },
             // Omarchy's themes were a step here ("omarchy-<ref>") until Linux became optional; ThemeStore fetches them now.
