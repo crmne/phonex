@@ -1,12 +1,17 @@
 package dev.omalauncher.studio
 
+import android.content.Context
+import android.os.PowerManager
 import android.util.Log
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import dev.omalauncher.BuildConfig
 import dev.omalauncher.Runtime
 import dev.omalauncher.linux.AGENTS
+import dev.omalauncher.linux.LinuxState
 import dev.omalauncher.linux.killTree
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +20,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -52,6 +60,7 @@ sealed interface CodexState {
  */
 class Studio(
     private val runtime: Runtime,
+    context: Context,
 ) {
     private val scope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main + CoroutineExceptionHandler { _, e -> Log.e(TAG, "studio job failed", e) })
@@ -65,12 +74,31 @@ class Studio(
     private var client: CodexClient? = null
     private var process: Process? = null
     private var connecting: Job? = null
-    private val conversations = mutableMapOf<String, Conversation>()
+    // Watched by the wakelock: a project opened or closed changes whether a turn runs.
+    private val conversations = mutableStateMapOf<String, Conversation>()
 
     /** Per project, the open() under way: creating a project sends its prompt while its screen opens it too. */
     private val opening = mutableMapOf<String, Deferred<Conversation>>()
     private val byThread = mutableMapOf<String, Conversation>()
     private val servers = mutableMapOf<String, DevServer>()
+
+    /**
+     * Keeps the CPU on while Phonex works: setting up Linux, installing Codex, or a Codex turn. Asleep,
+     * the phone stops proot's traced processes mid-command, and a turn that should take minutes waits for
+     * the screen to come on. An idle dev server doesn't need it, and the screen may turn off throughout.
+     */
+    private val wakeLock =
+        context.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "phonex:work").apply { setReferenceCounted(false) }
+
+    init {
+        scope.launch {
+            val installing = runtime.bootstrap.state.map { it is LinuxState.Installing }
+            val working = snapshotFlow { state == CodexState.Installing || conversations.values.any { it.running } }
+            combine(installing, working) { a, b -> a || b }.distinctUntilChanged().collect { busy ->
+                if (busy) wakeLock.acquire(WAKE_TIMEOUT_MS) else if (wakeLock.isHeld) wakeLock.release()
+            }
+        }
+    }
 
     /** Linux is up: list the projects and connect to Codex, installing it first if it isn't. */
     fun start() {
@@ -264,6 +292,9 @@ class Studio(
 
     companion object {
         private const val TAG = "studio"
+
+        /** A turn or an install that runs longer than this lets the phone sleep anyway, rather than drain it. */
+        private const val WAKE_TIMEOUT_MS = 2 * 60 * 60 * 1000L
         val CODEX = AGENTS.first { it.bin == "codex" }
 
         /** What Codex needs to know to build for the preview; the user's own wishes come in the turns. */
