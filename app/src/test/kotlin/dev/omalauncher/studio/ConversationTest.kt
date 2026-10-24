@@ -16,14 +16,14 @@ class ConversationTest {
     private val threadId = recorded.first { it.method == "turn/started" }.params.getString("threadId")
 
     @Test fun aRecordedTurnBecomesTheChat() {
-        var completed: Set<String>? = null
-        val chat = Conversation(threadId, "/root/projects/hello") { completed = it }
+        var completed = 0
+        val chat = Conversation(threadId, "/root/projects/hello") { completed++ }
         chat.sent("Create index.html with a one-line hello page, run ls to check it exists, then reply 'done'.")
         assertTrue(chat.running)
         recorded.forEach(chat::apply)
 
         assertFalse(chat.running)
-        assertEquals(setOf<String>(), completed)
+        assertEquals(1, completed)
         val items = chat.items.toList()
         // The message shown on send was replaced by Codex's, not shown twice.
         assertEquals(1, items.count { it is ChatItem.User })
@@ -43,9 +43,8 @@ class ConversationTest {
         assertTrue(chat.items.isEmpty())
     }
 
-    @Test fun editsShowPathsInTheProjectAndReachTheTurnsEnd() {
-        var completed: Set<String>? = null
-        val chat = Conversation("t", "/root/projects/hello") { completed = it }
+    @Test fun editsShowPathsInTheProject() {
+        val chat = Conversation("t", "/root/projects/hello")
         chat.apply(event("turn/started", """{"threadId":"t","turn":{"id":"u"}}"""))
         chat.apply(
             event(
@@ -58,7 +57,6 @@ class ConversationTest {
         chat.apply(event("turn/completed", """{"threadId":"t","turn":{"id":"u","status":"completed","error":null}}"""))
         val edit = chat.items.single() as ChatItem.Edit
         assertEquals(listOf(FileEdit(".phonex/dev", "add"), FileEdit("src/App.jsx", "update")), edit.files)
-        assertEquals(setOf(".phonex/dev", "src/App.jsx"), completed)
     }
 
     @Test fun aFailedTurnSaysWhy() {

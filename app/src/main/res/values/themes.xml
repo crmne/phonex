@@ -10,6 +10,11 @@
         <item name="android:windowBackground">#FF1A1B26</item>
     </style>
 
+    <!-- Phonex's own screen (StudioActivity): an opaque page in the system's light or dark theme. -->
+    <style name="Theme.Phonex" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/phonex_background</item>
+    </style>
+
     <!-- Only a dialog shows, over the app that opened it. -->
     <style name="Theme.Omalauncher.Dialog" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>

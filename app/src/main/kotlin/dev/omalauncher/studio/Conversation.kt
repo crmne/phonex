@@ -56,12 +56,12 @@ enum class Status { Running, Done, Failed }
  * One project's thread, kept as [items] for the chat. Live events ([apply]) and saved history ([load])
  * go through the same item parsing, so a reopened project looks like it did.
  *
- * [onTurnCompleted] gets the paths edited during the turn, for the dev server to decide whether to restart.
+ * [onTurnCompleted] runs at each turn's end, for the dev server to catch up with what Codex changed.
  */
 class Conversation(
     val threadId: String,
     private val projectDir: String,
-    private val onTurnCompleted: (edited: Set<String>) -> Unit = {},
+    private val onTurnCompleted: () -> Unit = {},
 ) {
     val items = mutableStateListOf<ChatItem>()
 
@@ -69,7 +69,10 @@ class Conversation(
     var running by mutableStateOf(false)
         private set
 
-    private val edited = mutableSetOf<String>()
+    /** The running turn, for `turn/interrupt`; null before Codex said it started. */
+    var turnId: String? = null
+        private set
+
     private var notices = 0
 
     /** Shows [text] at once, before Codex echoes it back as the turn's user message. */
@@ -78,13 +81,19 @@ class Conversation(
         put(ChatItem.User(PENDING, text))
     }
 
+    /** The send failed before a turn started: the composer is back, and the message says why. */
+    fun failed(message: String) {
+        running = false
+        notice(message, error = true)
+    }
+
     fun apply(event: CodexEvent) {
         val params = event.params
         if (params.optString("threadId").let { it.isNotEmpty() && it != threadId }) return
         when (event.method) {
             "turn/started" -> {
                 running = true
-                edited.clear()
+                turnId = params.optJSONObject("turn")?.optString("id")
             }
             "item/started", "item/completed" -> params.optJSONObject("item")?.let(::item)?.let(::put)
             "item/agentMessage/delta" -> append(params.optString("itemId"), params.optString("delta"))
@@ -95,10 +104,11 @@ class Conversation(
             }
             "turn/completed" -> {
                 running = false
+                turnId = null
                 val turn = params.optJSONObject("turn")
                 turn?.optJSONObject("error")?.let { notice(it.optString("message"), error = true) }
                 if (turn?.optString("status") == "interrupted") notice("Stopped", error = false)
-                onTurnCompleted(edited.toSet())
+                onTurnCompleted()
             }
         }
     }
@@ -126,7 +136,6 @@ class Conversation(
                 return
             }
         }
-        if (item is ChatItem.Edit) edited += item.files.map { it.path }
         val at = items.indexOfFirst { it.id == item.id }
         if (at >= 0) items[at] = item else items += item
     }
