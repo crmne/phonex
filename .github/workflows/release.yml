@@ -78,7 +78,7 @@ jobs:
           # The same R8 run as the Play AAB's, so it retraces Play crashes too: match `r8-map-id` to `# pg_map_id`.
           cp app/build/outputs/mapping/release/mapping.txt "mapping-${{ steps.version.outputs.name }}.txt"
 
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v4
         with:
           subject-path: ${{ steps.apk.outputs.file }}
 
