@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: 25
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # The NDK app/build.gradle.kts pins; installed up front so AGP doesn't download it mid-build.
       - name: Install the NDK
