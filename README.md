@@ -4,6 +4,8 @@ Codex on your phone. Describe a web app, and Codex builds it on the phone,
 in Arch Linux running next to Android, while you watch it run in a live
 preview. No laptop.
 
+https://github.com/user-attachments/assets/29d07e57-1363-4284-a0ec-eb8b334ec535
+
 Phonex was built in a day at the OpenAI DevDay community hackathon in Berlin,
 on top of [Omalauncher](https://github.com/SimonSchubert/omalauncher) by Simon
 Schubert, which does the hard part: Arch Linux ARM under proot, without root,
